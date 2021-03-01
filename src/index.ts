@@ -15,8 +15,6 @@ const template = new Template('generic', {
     teamIdentifier: process.env.APPLE_DEVELOPER_TEAM_ID,
     organizationName: "Gera",
     description: "Cartão de Cobrança Gera",
-    foregroundColor: "rgb(255, 255, 255)",
-    backgroundColor: "rgb(126, 48, 195)",
     logoText: "Gera",
     sharingProhibited: false
   });
@@ -43,6 +41,7 @@ app.post('/card/', async (req, res) => {
 
         fillPrimaryField(pass, req.body, cardType)
         fillSecondaryField(pass, req.body.message)
+        personalizeCard(pass, req.body)
         generateBarcode(pass, req.body, cardType)
         fillBackFields(pass, req.body)
         await embedImage(pass, req.body.imageUrl)
@@ -106,13 +105,12 @@ enum CardType {
 }
 
 function getNewPassRequestCardType(body: any): CardType {
-    if (body.hasOwnProperty('type') && body.hasOwnProperty('message')) {
+    if (body.hasOwnProperty('type') && body.hasOwnProperty('message') && body.hasOwnProperty('recipientName') && body.hasOwnPropert("recipientPhoneNumber")) {
         switch (body.type) {
             
             case CardType.Boleto:
             if (!(
                 body.hasOwnProperty('value') &&
-                body.hasOwnProperty('recipientName') &&
                 body.hasOwnProperty('boletoDigitableLine') &&
                 (body.hasOwnProperty('cpf') || body.hasOwnProperty('cnpj'))
             )) throw new Error('MissingValueOnRequest')
@@ -131,7 +129,6 @@ function getNewPassRequestCardType(body: any): CardType {
 
             case CardType.Febraban:
                 if (!(
-                    body.hasOwnProperty('recipientName') &&
                     body.hasOwnProperty('bankCode') &&
                     body.hasOwnProperty('bankName') &&
                     body.hasOwnProperty('agencyNumber') &&
@@ -162,6 +159,13 @@ function fillBackFields(pass: Pass, body: any) {
             })
         }
     }
+
+    pass.backFields.add({
+        label: "Suporte do App Gera",
+        key: 'supportMail',
+        value: process.env.CONTACT_EMAIL
+    })
+
     return pass
 }
 
@@ -202,6 +206,13 @@ function fillSecondaryField(pass: Pass, message: string) {
         value: message,
         textAlignment : "PKTextAlignmentLeft"
     })
+    return pass
+}
+
+function personalizeCard(pass: Pass, body: any) {
+    pass.backgroundColor = body.backgroundColor ?? "rgb(154, 69, 215)"
+    pass.foregroundColor = body.foregroundColor ?? "rgb(255, 255, 255)"
+
     return pass
 }
 
@@ -289,8 +300,9 @@ const backLabels = {
     agencyNumber: "Número da agência",
     accountNumber: "Número da conta",
     accountType: "Tipo de conta",
-    recipientName: "Nome do destinatário",
+    recipientName: "Nome de destinatário",
+    recipientPhoneNumber: "Contato de destinatário",
     boletoDigitableLine: "Linha digitável",
     cpf: "CPF",
-    cnpj: "CNPJ"
+    cnpj: "CNPJ",
 }
