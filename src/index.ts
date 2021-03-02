@@ -105,7 +105,7 @@ enum CardType {
 }
 
 function getNewPassRequestCardType(body: any): CardType {
-    if (body.hasOwnProperty('type') && body.hasOwnProperty('message') && body.hasOwnProperty('recipientName') && body.hasOwnPropert("recipientPhoneNumber")) {
+    if (body.hasOwnProperty('type') && body.hasOwnProperty('message') && body.hasOwnProperty('recipientName') && body.hasOwnProperty("recipientPhoneNumber")) {
         switch (body.type) {
             
             case CardType.Boleto:
