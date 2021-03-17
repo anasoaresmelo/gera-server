@@ -40,7 +40,7 @@ app.post('/card/', async (req, res) => {
         });
 
         fillPrimaryField(pass, req.body, cardType)
-        fillSecondaryField(pass, req.body.message)
+        fillSecondaryField(pass, req.body, cardType)
         personalizeCard(pass, req.body)
         generateBarcode(pass, req.body, cardType)
         fillBackFields(pass, req.body)
@@ -199,13 +199,20 @@ function fillPrimaryField(pass: Pass, body: any, cardType: CardType) {
 
 }
 
-function fillSecondaryField(pass: Pass, message: string) {
+function fillSecondaryField(pass: Pass, body: any, cardType: CardType) {
     pass.secondaryFields.add({
         key: "message",
         label: "Mensagem",
-        value: message,
+        value: body.message,
         textAlignment : "PKTextAlignmentLeft"
     })
+    if (cardType === CardType.Boleto) {
+        pass.auxiliaryFields.add({
+            key: "boletoDigitableLine",
+            label: "Linha digitável",
+            value: body.boletoDigitableLine
+        })
+    }
     return pass
 }
 
@@ -221,13 +228,11 @@ function generateBarcode(pass: Pass, body: any, cardType: CardType) {
             
         case CardType.Boleto:
             pass.barcodes = [{
-                    altText: body.boletoDigitableLine,
                     message: body.boletoDigitableLine.replace(/\D+/g, ''),
                     format: "PKBarcodeFormatCode128",
                     messageEncoding: "iso-8859-1"
             },
             {
-                altText: body.boletoDigitableLine,
                 message: body.boletoDigitableLine.replace(/\D+/g, ''),
                 format: "PKBarcodeFormatQR",
                 messageEncoding: "iso-8859-1"
