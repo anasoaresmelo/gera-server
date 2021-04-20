@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 import express from 'express'
 import { Template, Pass } from '@walletpass/pass-js'
 import * as passkit from '@walletpass/pass-js'
+import { staticPix } from 'pix-charge';
 import superagent from 'superagent'
 import sharp from 'sharp'
 import path from 'path'
@@ -101,7 +102,7 @@ enum CardType {
    PicPay = 'picpay',
    Boleto = 'boleto',
    Nubank = 'nubank',
-   Febraban = 'febraban' 
+   Pix = 'pix' 
 }
 
 function getNewPassRequestCardType(body: any): CardType {
@@ -127,16 +128,14 @@ function getNewPassRequestCardType(body: any): CardType {
                 body.hasOwnProperty('nubankUrl')
             )) throw new Error('MissingValueOnRequest')
 
-            case CardType.Febraban:
-                if (!(
-                    body.hasOwnProperty('bankCode') &&
-                    body.hasOwnProperty('bankName') &&
-                    body.hasOwnProperty('agencyNumber') &&
-                    body.hasOwnProperty('accountNumber') &&
-                    body.hasOwnProperty('accountType') &&
-                    body.hasOwnProperty('recipientName') &&
-                    (body.hasOwnProperty('cpf') || body.hasOwnProperty('cnpj'))
-                )) throw new Error('MissingValueOnRequest')
+            case CardType.Pix:
+                if (!((body.hasOwnProperty('value')) && (
+                    body.hasOwnProperty('cpf') ||
+                    body.hasOwnProperty('cnpj') ||
+                    body.hasOwnProperty('emailAddress') ||
+                    body.hasOwnProperty('pixRandomKey') ||
+                    body.hasOwnProperty('recipientPhoneNumber')
+                ))) throw new Error('MissingValueOnRequest')
             break;
 
             default:
@@ -261,15 +260,34 @@ function generateBarcode(pass: Pass, body: any, cardType: CardType) {
             }]
             return pass
 
-        case CardType.Febraban:
+        case CardType.Pix:
+
+            const merchantKey = body.cpf ??
+            body.cnpj ??
+            body.emailAddress ??
+            body.pixRandomKey ??
+            body.recipientPhoneNumber
+
+            const pixCharge = staticPix({
+                merchantKey,
+                merchantName: body.recipientName,
+                amount: body.value,
+                description: 'Cobrança do Gera'
+            });
+
             pass.barcodes = [{
-                "altText" : "Aponte a câmera ⬆️",
-                "message" : `${body.bankCode} - ${body.bankName}\n
-                             Ag. ${body.agencyNumber}\n
-                             Conta ${body.accountNumber}`,
+                "altText" : "Código QR do PIX",
+                "message" : pixCharge,
                 "format" : "PKBarcodeFormatQR",
                 "messageEncoding" : "iso-8859-1"
             }]
+
+            pass.auxiliaryFields.add({
+                key: "pixCharge",
+                label: "Pix Copia e Cola",
+                value: pixCharge
+            })
+
             return pass
 
     }
